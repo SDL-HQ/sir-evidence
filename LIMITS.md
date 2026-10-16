@@ -1,8 +1,9 @@
 # What SIR does not do
 
-Lifted verbatim from the evidence perimeter in the archive of record, lead-in
-sentences included. It is not rewritten for this page, because a limit
-restated for a front door is a limit softened for a front door.
+Lifted verbatim from the evidence perimeter in the archive of record, with each
+section's own lead-in sentence where the perimeter has one. Nothing here is
+rewritten for this page, because a limit restated for a front door is a limit
+softened for a front door.
 
 ## Explicit non-claims
 
@@ -18,7 +19,9 @@ Current evidence and implementation do not claim that SIR:
 
 ## What current evidence does not support
 
-
+The perimeter gives this list no lead-in sentence, so there is none to
+lift. Its items are scoped by the perimeter itself, and the phrase
+"listed here" in the last of them means listed there, not here.
 
 - it does not show that all models are equivalent generally
 - it does not show that all attack classes are common-mode generally

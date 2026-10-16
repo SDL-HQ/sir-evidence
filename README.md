@@ -1,4 +1,4 @@
-# SIR, in seven commands
+# SIR, in six commands and one you break yourself
 
 SIR is a deterministic pre-inference gate. It reads a request before a model
 does, decides `PASS` or `BLOCKED` by rules alone with no model in the decision
@@ -8,41 +8,41 @@ is the point: it is designed to be checked by someone who does not trust us.
 **Read [LIMITS.md](LIMITS.md) second.** It says what SIR does not do, in the
 project's own words, and most of what is below is a limit made concrete.
 
-This repository is generated from the archive of record, pinned at `v2.5.0`.
-It holds seven real published archives, chosen because running our own
-verifiers against them produces different answers.
+This repository is generated from the archive of record, pinned at `v2.5.0`. It
+holds 6 real published archives, each chosen because running our
+verifiers against it produces a different answer.
 
-**5 of the seven do not come back clean.** One has a signature that
-genuinely does not verify. One is missing a file its own manifest lists. The
-rest are boundaries and absences we have disclosed rather than tidied: an
-archive too old for the current binding scheme, one that ships no ledger, and
-one that predates the receipt format.
+**Our own verdict tool establishes 2 of the 6.**
+`verify_evidence.py` prints one verdict over every property of an archive, and
+exit 0 from a single-property verifier is not the same thing. 4 of
+these 6 come back NOT ESTABLISHED or FAILED, and
+4 of them are defects this project has already written up in its
+own errata, named in the table.
 
-The seventh comes back clean twice over and is still worth running: it is a
-baseline record, not a certificate, and pointing the certificate verifier at
-it makes the verifier refuse the document rather than say something wrong
-about it.
+| # | Exhibit | Document exit | Receipt exit | Verdict | Errata |
+|---|---|---|---|---|---|
+| 1 | an archive that establishes every property | `0` | `0` | **ESTABLISHED** | - |
+| 2 | a signature that does not verify | `5` | `2` | **FAILED** | E2 |
+| 3 | an archive from before the 2.3.4 correction | `9` | `0` | **NOT ESTABLISHED** | E4 |
+| 4 | an archive with no ledger and no receipt | `0` | `3` | **NOT ESTABLISHED** | E3 |
+| 5 | a complete-looking archive that is not | `0` | `2` | **FAILED** | E1 |
+| 6 | a baseline record | `0` | `0` | **ESTABLISHED** | - |
 
-| # | Exhibit | Document exit | Receipt exit | What it shows |
-|---|---|---|---|---|
-| 1 | a current certificate | `0` | `0` | signature, ledger binding and row count all check, and the archive is complete |
-| 2 | a signature that fails | `5` | `2` | a real signature that really does not verify, published anyway |
-| 3 | a pre-2.3.4 archive | `9` | `0` | a documented format boundary is not tampering, and the verifier says which it is |
-| 4 | an archive shipping no ledger | `0` | `3` | verified, and less than "verified" sounds |
-| 5 | an archive with no receipt | `0` | `3` | legacy archives predate the receipt scheme, disclosed |
-| 6 | a complete-looking archive that is not | `0` | `2` | the receipt catches what the certificate cannot |
-| 7 | a baseline record | `0` | `0` | a certificate verifier refuses it, and its own verifier accepts it |
-
-[VERIFY.md](VERIFY.md) has the exact command for each, and explains why each
-one names its ledger on the command line.
+[VERIFY.md](VERIFY.md) has the exact command for each, explains why each one
+names its ledger, and ends with a recipe for changing one field in one ledger
+row so you can watch the chain refuse to re-derive. That last one is the only
+item here that is a detection rather than a disclosure, and it is the reason
+the evidence plane exists.
 
 The archive of record is at [https://github.com/SDL-HQ/sir-firewall](https://github.com/SDL-HQ/sir-firewall). It holds
-349 runs and 347 certificates.
+350 runs and 348 certificates.
 
-Nothing here is a sample chosen for how it looks. Each exhibit is selected
-from a category by a tool in the main repository, and a test there refuses any
-category with only one member, so an exhibit is always an example of a class
-rather than a fact about one run.
+Nothing here is a sample chosen for how it looks. Each exhibit is selected from
+a category by a tool in the main repository, a test there refuses any category
+with fewer than two eligible archives, and another refuses any exhibit drawn
+from the 54 ungated baseline runs this project published as audit
+certificates. The first version of this page failed that last check, which did
+not exist: its lead exhibit was one of the 54.
 
 ## This repository is generated
 
@@ -54,5 +54,6 @@ archive of record. `GENERATED` records the tag, the commit it was built from,
 and when.
 
 The build is not a copy. It runs every command on this page inside the
-directory it has just written, and stops without publishing if any exit code
-differs from the one the page gives for it.
+directory it has just written, including the tampering recipe, and stops
+without publishing if any exit code or verdict differs from the one the page
+gives for it.
