@@ -1,0 +1,371 @@
+from __future__ import annotations
+
+import argparse
+import importlib.util
+import json
+import os
+import subprocess
+import sys
+from pathlib import Path
+
+from sir_firewall import __version__
+from sir_firewall.model_selection import DEFAULT_MODEL, DEFAULT_PROVIDER, validate_execution_selection
+
+
+ROOT = Path(__file__).resolve().parents[2]
+PACK_REGISTRY = ROOT / "spec" / "packs" / "pack_registry.v1.json"
+
+
+def _require_repository_layout() -> None:
+    required_paths = (
+        ROOT / "red_team_suite.py",
+        PACK_REGISTRY,
+        ROOT / "policy" / "isc_policy.json",
+        ROOT / "tools",
+    )
+    for path in required_paths:
+        if not path.exists():
+            print(
+                "ERROR: the sir command requires a complete editable repository checkout; "
+                "a non-editable install is not a supported relocatable runtime; "
+                f"missing required path: {path}",
+                file=sys.stderr,
+            )
+            raise SystemExit(2)
+
+
+def _unknown_pack_message(pack_id: str) -> str:
+    return (
+        f"ERROR: unknown pack_id {pack_id}. "
+        "Use `sir packs list` to discover pack_id values and `sir packs show <pack_id>` for details."
+    )
+
+
+def _run_py(script_rel: str, args: list[str]) -> int:
+    script = ROOT / script_rel
+    cmd = [sys.executable, str(script), *args]
+    return subprocess.call(cmd, cwd=ROOT)
+
+
+def _cmd_run(ns: argparse.Namespace) -> int:
+    if ns.mode not in {"audit", "live", "scenario"}:
+        raise SystemExit(f"ERROR: unsupported --mode {ns.mode}")
+
+    provider = getattr(ns, "provider", DEFAULT_PROVIDER)
+    model = getattr(ns, "model", DEFAULT_MODEL)
+    try:
+        provider, model = validate_execution_selection(provider=provider, model=model, mode=ns.mode)
+    except ValueError as exc:
+        print(f"ERROR: {exc}", file=sys.stderr)
+        return 2
+
+    if ns.mode == "live" and importlib.util.find_spec("litellm") is None:
+        print(
+            'ERROR: LIVE mode requires litellm installed. Run: python3 -m pip install -e ".[live]"',
+            file=sys.stderr,
+        )
+        return 2
+
+    if ns.mode == "scenario":
+        if ns.suite:
+            print("ERROR: --mode scenario does not support --suite. Use --scenario or a scenario pack.", file=sys.stderr)
+            return 2
+        if ns.scenario and ns.pack:
+            print("ERROR: --mode scenario accepts only one of --scenario or --pack.", file=sys.stderr)
+            return 2
+        if ns.pack:
+            reg = _load_registry()
+            pack = next((p for p in reg.get("packs", []) if p.get("pack_id") == ns.pack), None)
+            if not pack:
+                print(_unknown_pack_message(ns.pack), file=sys.stderr)
+                return 2
+            if pack.get("schema") != "scenario_json_v1":
+                print(
+                    f"ERROR: --mode scenario requires a scenario_json_v1 pack; got {ns.pack} ({pack.get('schema')}).",
+                    file=sys.stderr,
+                )
+                return 2
+        elif not ns.scenario:
+            print("ERROR: --mode scenario requires --scenario or a scenario_json_v1 --pack.", file=sys.stderr)
+            return 2
+
+    argv: list[str] = []
+    if ns.mode == "scenario":
+        argv.extend(["--mode", "audit"])
+    else:
+        argv.extend(["--mode", ns.mode])
+
+    if ns.pack:
+        argv.extend(["--pack", ns.pack])
+    if ns.suite:
+        argv.extend(["--suite", ns.suite])
+    if ns.scenario:
+        argv.extend(["--scenario", ns.scenario])
+    if provider:
+        argv.extend(["--provider", provider])
+    if model:
+        argv.extend(["--model", model])
+    if ns.template:
+        argv.extend(["--template", ns.template])
+    if ns.no_model_calls:
+        argv.append("--no-model-calls")
+
+    rc = _run_py("red_team_suite.py", argv)
+
+    if rc == 0 and ns.mode == "scenario":
+        summary_path = ROOT / "proofs" / "run_summary.json"
+        if summary_path.exists():
+            try:
+                summary = json.loads(summary_path.read_text(encoding="utf-8"))
+                if summary.get("scenario_id") or summary.get("scenario_hash"):
+                    summary["proof_class"] = "SCENARIO_AUDIT"
+                    summary_path.write_text(json.dumps(summary, indent=2) + "\n", encoding="utf-8")
+                else:
+                    print(
+                        f"WARNING: skipping scenario proof_class rewrite at {summary_path}: "
+                        "summary does not include scenario_id/scenario_hash",
+                        file=sys.stderr,
+                    )
+            except (json.JSONDecodeError, OSError) as exc:
+                print(f"WARNING: failed to update scenario summary at {summary_path}: {exc}", file=sys.stderr)
+
+    return rc
+
+
+def _cmd_verify_cert(ns: argparse.Namespace) -> int:
+    args = [ns.path]
+    if ns.key:
+        args.extend(["--pubkey", ns.key])
+    if ns.key_registry:
+        args.extend(["--key-registry", ns.key_registry])
+    if ns.ledger:
+        args.extend(["--ledger", ns.ledger])
+    if ns.no_ledger:
+        args.append("--no-ledger")
+    return _run_py("tools/verify_certificate.py", args)
+
+
+def _cmd_verify_archive(ns: argparse.Namespace) -> int:
+    args = [ns.path]
+    if ns.key:
+        args.extend(["--pubkey", ns.key])
+    if ns.key_registry:
+        args.extend(["--key-registry", ns.key_registry])
+    return _run_py("tools/verify_archive_receipt.py", args)
+
+
+def _cmd_benchmark_run(ns: argparse.Namespace) -> int:
+    if ns.mode == "scenario":
+        print("ERROR: benchmark run currently supports --mode audit|live only.", file=sys.stderr)
+        return 2
+    provider = getattr(ns, "provider", DEFAULT_PROVIDER)
+    model = getattr(ns, "model", DEFAULT_MODEL)
+    try:
+        provider, model = validate_execution_selection(provider=provider, model=model, mode=ns.mode)
+    except ValueError as exc:
+        print(f"ERROR: {exc}", file=sys.stderr)
+        return 2
+
+    args: list[str] = ["--mode", ns.mode, "--provider", provider, "--model", model]
+    if ns.pack:
+        args.extend(["--pack", ns.pack])
+    if ns.suite:
+        args.extend(["--suite", ns.suite])
+    if ns.scenario:
+        args.extend(["--scenario", ns.scenario])
+    if ns.template:
+        args.extend(["--template", ns.template])
+    if ns.no_model_calls:
+        args.append("--no-model-calls")
+    if ns.pair_key:
+        args.extend(["--pair-key", ns.pair_key])
+    return _run_py("tools/run_paired_benchmark.py", args)
+
+
+def _load_registry() -> dict:
+    try:
+        return json.loads(PACK_REGISTRY.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        print(f"ERROR: failed to load pack registry {PACK_REGISTRY}: {exc}", file=sys.stderr)
+        raise SystemExit(2)
+
+
+def _cmd_packs_list(_: argparse.Namespace) -> int:
+    """List the active registry suites, with what each one enforces under.
+
+    Filtered on status rather than on visibility. Until 13 October 2026 this
+    skipped anything whose visibility was not `public`, which hid
+    `mental_health_clinical`. That suite is `encoded` because the registry
+    validator requires it for an `encoded_high_risk` pack, so that its prompts
+    are not in plaintext. The reason is about content, and this command prints
+    no content: its existence, visibility, row count and coverage are already
+    published in docs/rule-coverage.md and on docs/domain-packs.html, so hiding
+    it here protected nothing and disagreed with two public surfaces.
+
+    `visibility` and `enforcement_pack` are printed because a listing of suite
+    identifiers invites the reader to assume a policy pack of the same name,
+    which is what the backlog row *`sir packs list` presents registry
+    discoverability as execution availability* is about. Four entries enforce
+    under a pack of another name.
+
+    `canary_fail` stays out, as draft. It exists to fail and is not a suite
+    anyone should select.
+    """
+    reg = _load_registry()
+    for pack in reg.get("packs", []):
+        if pack.get("status") != "active":
+            continue
+        pid = pack.get("pack_id", "")
+        schema = pack.get("schema", "")
+        status = pack.get("status", "")
+        visibility = pack.get("visibility", "")
+        enforcement = str(pack.get("enforcement_pack") or "").strip() or pid
+        print(f"{pid}\t{schema}\t{status}\t{visibility}\t{enforcement}")
+    return 0
+
+
+def _cmd_packs_show(ns: argparse.Namespace) -> int:
+    reg = _load_registry()
+    for pack in reg.get("packs", []):
+        if pack.get("pack_id") == ns.pack_id:
+            print(json.dumps(pack, indent=2))
+            return 0
+    print(f"ERROR: unknown pack_id {ns.pack_id}", file=sys.stderr)
+    return 2
+
+
+def build_parser() -> argparse.ArgumentParser:
+    p = argparse.ArgumentParser(
+        prog="sir",
+        description="SIR operator CLI for deterministic pre-inference evaluation and verification tasks.",
+    )
+    p.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
+    sub = p.add_subparsers(dest="cmd", required=True)
+
+    run = sub.add_parser(
+        "run",
+        help="Execute an audit/live/scenario run using existing SIR paths.",
+        description=(
+            "Run SIR via the common operator path.\n"
+            "Modes:\n"
+            "  audit    Deterministic offline gate evaluation (default).\n"
+            "  live     Provider-call gating check (requires provider credential env var + litellm).\n"
+            "  scenario Scenario-only path; requires exactly one of --scenario or --pack\n"
+            "           where --pack resolves to schema scenario_json_v1.\n\n"
+            "Discover packs with `sir packs list` and inspect with `sir packs show <pack_id>`."
+        ),
+        formatter_class=argparse.RawTextHelpFormatter,
+    )
+    run.add_argument(
+        "--mode",
+        choices=["audit", "live", "scenario"],
+        default="audit",
+        help="Execution mode: audit (default), live, or scenario.",
+    )
+    run.add_argument(
+        "--pack",
+        default=None,
+        help="Pack identifier from pack registry (discover via `sir packs list`).",
+    )
+    run.add_argument(
+        "--suite",
+        default=None,
+        help="Explicit suite CSV path (not supported with --mode scenario).",
+    )
+    run.add_argument(
+        "--scenario",
+        default=None,
+        help="Scenario JSON path for --mode scenario (mutually exclusive with --pack in scenario mode).",
+    )
+    run.add_argument(
+        "--provider",
+        choices=["xai", "openai"],
+        default=DEFAULT_PROVIDER,
+        help="Provider selection for model execution paths (default: xai).",
+    )
+    run.add_argument("--model", default=DEFAULT_MODEL, help="Model override for compatible run paths.")
+    run.add_argument("--template", default=None, help="Prompt template override for compatible run paths.")
+    run.add_argument(
+        "--no-model-calls",
+        action="store_true",
+        help="Skip provider model calls where supported by the underlying run path.",
+    )
+    run.set_defaults(fn=_cmd_run)
+
+    verify = sub.add_parser("verify")
+    verify_sub = verify.add_subparsers(dest="verify_cmd", required=True)
+
+    vcert = verify_sub.add_parser("cert")
+    vcert.add_argument("path")
+    vcert.add_argument("--key", default=None, help="Path to PEM public key for signature verification.")
+    vcert.add_argument("--key-registry", default=None, help="Path to key registry JSON for signing_key_id lookup.")
+    ledger_mode = vcert.add_mutually_exclusive_group()
+    ledger_mode.add_argument("--ledger", default=None, help="Explicit ITGL ledger path for binding or replay.")
+    ledger_mode.add_argument(
+        "--no-ledger",
+        action="store_true",
+        help="Explicitly skip certificate-to-ledger binding verification.",
+    )
+    vcert.set_defaults(fn=_cmd_verify_cert)
+
+    varch = verify_sub.add_parser("archive")
+    varch.add_argument("path")
+    varch.add_argument("--key", default=None, help="Path to PEM public key for signature verification.")
+    varch.add_argument("--key-registry", default=None, help="Path to key registry JSON for signing_key_id lookup.")
+    varch.set_defaults(fn=_cmd_verify_archive)
+
+    packs = sub.add_parser(
+        "packs",
+        help="List or inspect registered pack metadata.",
+        description="Pack registry lookup helpers for operator pack discovery.",
+    )
+    packs_sub = packs.add_subparsers(dest="packs_cmd", required=True)
+
+    plist = packs_sub.add_parser(
+        "list",
+        help="List active pack_id/schema/status/visibility/enforcement_pack rows.",
+    )
+    plist.set_defaults(fn=_cmd_packs_list)
+
+    pshow = packs_sub.add_parser("show", help="Show full registry record for one pack_id.")
+    pshow.add_argument("pack_id", help="Exact pack_id to inspect (find values with `sir packs list`).")
+    pshow.set_defaults(fn=_cmd_packs_show)
+
+    benchmark = sub.add_parser(
+        "benchmark",
+        help="Paired benchmark helpers.",
+        description="Execute paired benchmark runs using existing single-run audit/cert/archive paths.",
+    )
+    benchmark_sub = benchmark.add_subparsers(dest="benchmark_cmd", required=True)
+    b_run = benchmark_sub.add_parser(
+        "run",
+        help="Run an ungated baseline + gated run pair and write a pair artifact.",
+    )
+    # No default. A paired benchmark's baseline half requires live mode from
+    # SIR 2.5, because an ungated run with no provider calls observes nothing,
+    # and a live run spends provider credit. Defaulting either way makes one of
+    # those happen without the operator saying so.
+    b_run.add_argument("--mode", choices=["audit", "live"], required=True)
+    b_run.add_argument("--pack", default=None)
+    b_run.add_argument("--suite", default=None)
+    b_run.add_argument("--scenario", default=None)
+    b_run.add_argument("--provider", choices=["xai", "openai"], default=DEFAULT_PROVIDER)
+    b_run.add_argument("--model", default=DEFAULT_MODEL)
+    b_run.add_argument("--template", default=None)
+    b_run.add_argument("--no-model-calls", action="store_true")
+    b_run.add_argument("--pair-key", default=None)
+    b_run.set_defaults(fn=_cmd_benchmark_run)
+
+    return p
+
+
+def main() -> None:
+    parser = build_parser()
+    ns = parser.parse_args()
+    _require_repository_layout()
+    rc = ns.fn(ns)
+    raise SystemExit(rc)
+
+
+if __name__ == "__main__":
+    main()

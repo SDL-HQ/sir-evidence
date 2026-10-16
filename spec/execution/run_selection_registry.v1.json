@@ -1,0 +1,42 @@
+{
+  "registry_version": "v1",
+  "providers": [
+    "xai",
+    "openai"
+  ],
+  "models_by_provider": {
+    "xai": [
+      "grok-3-beta",
+      "grok-4.3",
+      "grok-4.20-0309-reasoning",
+      "grok-4.20-0309-non-reasoning"
+    ],
+    "openai": [
+      "gpt-4.1-mini",
+      "gpt-4.1",
+      "gpt-5-mini",
+      "gpt-5.4-mini",
+      "gpt-5.5"
+    ]
+  },
+  "allowed_operations": [
+    "run",
+    "benchmark"
+  ],
+  "modes_by_operation": {
+    "run": [
+      "audit",
+      "live"
+    ],
+    "benchmark": [
+      "audit",
+      "live"
+    ]
+  },
+  "workflow_pack_ids": [
+    "generic_safety",
+    "support_operator_override",
+    "data_exfiltration_pressure",
+    "eu_ai_act_compliance_pressure"
+  ]
+}

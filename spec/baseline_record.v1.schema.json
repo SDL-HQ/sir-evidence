@@ -1,0 +1,302 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sdl-hq.github.io/sir-firewall/spec/baseline_record.v1.schema.json",
+  "title": "SIR Ungated Baseline Record v1",
+  "description": "What an ungated baseline run is allowed to say about itself.\n\nA baseline runs a prompt set with the SIR gate out of the path, so there is no gate decision to report and no audit outcome to compute. Before SIR 2.5 such a run was described by an audit certificate, which has both: 54 were published recording AUDIT FAILED under proof classes that name firewall activity, and docs/archive-errata.md E7 records them.\n\nThis record carries one claim: a named prompt set was forwarded to a named provider with nothing deciding on it, and this is what came back at the transport level. It carries no result and no proof class, and the fields a certificate uses to describe enforcement are forbidden rather than nullable, because a null in a field a reader expects to hold a verdict is how the 54 came to be read as failed audits.\n\nWhat a record is for: it establishes that a named prompt set was forwarded to a named provider with the gate out of the path, and how many of those calls returned. It is the provenance half of a comparison whose measured side is the gated run, fixing which prompts went to which model under which repository state so the gated run's figures can be attributed to that prompt set. It is not a control for the provider's own safety layer, because the call outcome cannot tell a provider-side refusal from an outage.\n\nWhat it does not establish is stated in docs/benchmark-cycle.v1.md and in the evidence perimeter: the record is the issuer's account of its own run. The rows authenticate what the producer encoded, not an independently observed absence of gate invocation.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "record_kind",
+    "record_version",
+    "run_id",
+    "timestamp_utc",
+    "sir_firewall_version",
+    "commit_sha",
+    "repository",
+    "ci_run_url",
+    "mode",
+    "provider",
+    "model",
+    "pack_id",
+    "pack_version",
+    "suite_path",
+    "prompt_set_hash",
+    "prompt_set_hash_kind",
+    "ledger",
+    "counters",
+    "signing_key_id",
+    "payload_hash",
+    "signature"
+  ],
+  "properties": {
+    "record_kind": {
+      "const": "sir_ungated_baseline",
+      "description": "Declares the document's type before anything reads its fields."
+    },
+    "record_version": {
+      "const": 1
+    },
+    "run_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The run this record describes. Required, not optional: the key registry's revocation rule refuses a revoked key's document without a parseable run identity, so a record without one could not be checked against a revocation."
+    },
+    "timestamp_utc": {
+      "type": "string",
+      "minLength": 1,
+      "description": "When this record was signed. Named as on a certificate so revocation reads both documents through the same function."
+    },
+    "sir_firewall_version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "commit_sha": {
+      "type": "string"
+    },
+    "repository": {
+      "type": "string"
+    },
+    "ci_run_url": {
+      "type": "string"
+    },
+    "mode": {
+      "const": "live",
+      "description": "A baseline requires live mode. With no gate and no provider call a run observes nothing its prompt set does not already state."
+    },
+    "provider": {
+      "type": "string",
+      "minLength": 1
+    },
+    "model": {
+      "type": "string",
+      "minLength": 1
+    },
+    "pack_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The registry pack that selected the prompt set, never the enforcement pack. A baseline enforces nothing."
+    },
+    "pack_version": {
+      "type": "string"
+    },
+    "suite_path": {
+      "type": "string",
+      "minLength": 1
+    },
+    "prompt_set_hash": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "prompt_set_hash_kind": {
+      "enum": [
+        "suite_hash",
+        "scenario_hash"
+      ]
+    },
+    "scenario_id": {
+      "type": "string",
+      "description": "Present only for a scenario prompt set."
+    },
+    "ledger": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "chain_version",
+        "row_version",
+        "row_count",
+        "itgl_final_hash"
+      ],
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "chain_version": {
+          "const": 2,
+          "description": "Chain version 2 covers a row's contents in its own hash. A version 1 row's status is not evidence of anything, so a baseline record cannot be issued over one."
+        },
+        "row_version": {
+          "const": 1,
+          "description": "The baseline row format every row of the bound ledger is in. Declared here and carried on each row, both covered by the chain whose terminal hash this document signs, and the verifier refuses a ledger whose rows disagree with this value. A future row format bumps both, so a verifier built for one version refuses the other instead of reading it by the wrong rules."
+        },
+        "row_count": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "itgl_final_hash": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        }
+      }
+    },
+    "counters": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Recomputed from the bound ledger's rows by the verifier, not taken from this document. In a scenario a row is a turn and each provider call carries the earlier turns, so these count calls and turns rather than distinct content exposures. That history is built from the fixture's own rows, each contributing its role and its prompt text; it is appended before the call and regardless of the call's outcome, so a turn whose call failed still appears in later turns' history, and no entry in it is ever a provider reply.",
+      "required": [
+        "prompts_forwarded",
+        "expected_block_prompts_forwarded",
+        "expected_allow_prompts_forwarded",
+        "provider_call_attempts",
+        "provider_call_successes",
+        "provider_call_failures"
+      ],
+      "properties": {
+        "prompts_forwarded": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Rows in the bound ledger. Every baseline row attempts a provider call, so this is also the attempt count."
+        },
+        "expected_block_prompts_forwarded": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "The prompt set's own label count. Not a leak count: nothing judged these prompts, and nothing blocked them."
+        },
+        "expected_allow_prompts_forwarded": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "The prompt set's own label count for allow, carried through from the suite file. Not a count of anything that happened."
+        },
+        "provider_call_attempts": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Rows on which a provider call was issued, counted by the runner that issued them. One per attempt: a retry or a timeout is a further attempt. The count can be short of what happened and can also exceed it; a row asserting an attempt never issued satisfies the row shape."
+        },
+        "provider_call_successes": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Calls that returned. It records whether the call raised and nothing else: a response carrying the provider's own content-policy refusal is a success, because the call returned. No response is read to decide this."
+        },
+        "provider_call_failures": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Calls that raised. A refusal the provider returns as an error is counted here and is not distinguishable from an outage, a timeout, a rate limit or a bad credential."
+        }
+      }
+    },
+    "signing_key_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "payload_hash": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "signature": {
+      "type": "string",
+      "minLength": 1,
+      "description": "PKCS1v15 over the payload, base64."
+    }
+  },
+  "not": {
+    "description": "Forbidden, not nullable. Each of these is a statement about enforcement, and a baseline enforces nothing. A record carrying any of them is refused outright rather than read with the field ignored.",
+    "anyOf": [
+      {
+        "required": [
+          "result"
+        ]
+      },
+      {
+        "required": [
+          "proof_class"
+        ]
+      },
+      {
+        "required": [
+          "policy_hash"
+        ]
+      },
+      {
+        "required": [
+          "policy_version"
+        ]
+      },
+      {
+        "required": [
+          "enforced_policy_matches_signed_policy"
+        ]
+      },
+      {
+        "required": [
+          "configuration_hash"
+        ]
+      },
+      {
+        "required": [
+          "configurations_observed"
+        ]
+      },
+      {
+        "required": [
+          "trust_fingerprint"
+        ]
+      },
+      {
+        "required": [
+          "safety_fingerprint"
+        ]
+      },
+      {
+        "required": [
+          "benchmark_execution"
+        ]
+      },
+      {
+        "required": [
+          "jailbreaks_leaked"
+        ]
+      },
+      {
+        "required": [
+          "harmless_blocked"
+        ]
+      },
+      {
+        "required": [
+          "content_evaluated"
+        ]
+      },
+      {
+        "required": [
+          "content_allow_prompts"
+        ]
+      },
+      {
+        "required": [
+          "content_block_prompts"
+        ]
+      },
+      {
+        "required": [
+          "content_false_positive_rate"
+        ]
+      },
+      {
+        "required": [
+          "systemic_reset_count"
+        ]
+      },
+      {
+        "required": [
+          "legitimate_requests_denied_by_system_failure"
+        ]
+      },
+      {
+        "required": [
+          "prompts_tested"
+        ]
+      },
+      {
+        "required": [
+          "model_calls_made"
+        ]
+      },
+      {
+        "required": [
+          "audit"
+        ]
+      }
+    ]
+  }
+}

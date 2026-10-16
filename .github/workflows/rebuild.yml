@@ -1,0 +1,63 @@
+name: Rebuild from the archive of record
+
+# This file is written by tools/generate_shop_window.py in the archive of
+# record. Do not edit it here. A token issued to Actions cannot update a
+# workflow file, so when the generator changes it the job below fails and says
+# how to push the new one by hand.
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 6 * * 1"
+
+permissions:
+  contents: write
+
+jobs:
+  rebuild:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: window
+
+      - name: Check out the archive of record at its latest release tag
+        run: |
+          git clone --quiet https://github.com/SDL-HQ/sir-firewall.git vault
+          cd vault
+          git checkout --quiet "$(git tag --list --sort=-v:refname | head -n 1)"
+
+      - name: Install the only dependency the verifiers have
+        run: python3 -m pip install --quiet cryptography
+
+      - name: Build, which refuses if a documented exit code does not reproduce
+        run: python3 vault/tools/generate_shop_window.py --out built
+
+      - name: Stop if the generator would change this workflow
+        run: |
+          if ! diff -r built/.github window/.github; then
+            echo "The generator writes a different workflow than this repository holds."
+            echo "Actions cannot update a workflow file. Push it from a clone of the"
+            echo "archive of record:"
+            echo "  python3 tools/generate_shop_window.py --out w && cp -a w/.github ."
+            exit 1
+          fi
+
+      - name: Replace the window with what was built
+        run: |
+          cd window
+          git rm -rq --ignore-unmatch . -- ':!.git' ':!.github'
+          cp -a ../built/. .
+          git add -A
+
+      - name: Commit, if anything moved
+        run: |
+          cd window
+          if git diff --cached --quiet; then
+            echo "The window already matches the archive of record."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -qm "Rebuild from $(sed -n 's/^tag //p' GENERATED)"
+          git push

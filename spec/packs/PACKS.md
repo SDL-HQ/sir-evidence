@@ -1,0 +1,211 @@
+# Pack Scale and Hygiene
+
+This file is the canonical pack guidance for the current pack registry model.
+
+## What a pack is
+
+A pack is a versioned test suite plus metadata in `spec/packs/pack_registry.v1.json`.
+
+A pack entry exists to make selection, validation, and review deterministic.
+
+## Scope boundary
+
+- Domain packs are CSV suites under `tests/domain_packs/`.
+- Scenario packs use scenario JSON suites under `tests/scenario_packs/`.
+- The registry already contains both pack types. This guidance does not introduce new scenario-pack semantics.
+- Pack evaluation binds to request-path inputs for deterministic pre-inference gate testing; this file does not define post-inference or full system-governance semantics.
+
+## Three pack artefact categories
+
+The repository uses “pack” for three distinct artefact categories:
+
+1. **ISC policy packs** under `src/sir_firewall/policy/isc_packs/` configure runtime templates, friction limits, enforcement flags and optional structured schemas.
+2. **Registry-managed benchmark suites** are the domain CSV and scenario JSON prompt sets listed in `spec/packs/pack_registry.v1.json`.
+3. **Non-registry exploratory fixtures** are loaded directly by dedicated tests and are not discoverable through `sir packs list`.
+
+See `tests/domain_packs/README.md` for the operator-facing distinction and fixture examples.
+
+Four registry suites have no same-named ISC policy pack: `account_recovery_fraud`, `mental_health_clinical`, `scenario_injection_chain`, and `scenario_tool_injection`. Each declares `generic_safety` in its `enforcement_pack` field and the runner resolves through that field, so all four evaluate every row through the `--pack` route. This paragraph described systemic-reset blocks until 13 October 2026; that stopped being true on 8 October. See `docs/backlog.md` for the rule-coverage findings, which are separate: these suites run, and their expected-block rows still leak.
+
+### ISC policy-pack format
+
+Runtime ISC policy packs require a non-empty `pack_id`, a `templates` object
+covering every identifier in the gate's built-in allowed-template set with a
+positive native JSON integer `max_tokens`, and a `flags` object containing
+native JSON booleans for `CHECKSUM_ENFORCED` and `CRYPTO_ENFORCED`. The legacy
+`STRICT_ISC_ENFORCEMENT` key is accepted when present but is not required; ISC structural
+rejection is unconditional but is not currently consulted; ISC structural rejection is
+unconditional. The optional `structured_request_schema` is validated when a
+pack is used for structured ingress.
+
+## Required metadata
+
+Each registry entry must include:
+
+- `pack_id` (stable lowercase snake_case)
+- `schema` (`csv_single_turn_v1` or `scenario_json_v1`)
+- `risk_class` (`baseline`, `domain`, or `encoded_high_risk`)
+- `status` (`active`, `draft`, or `deprecated`)
+- `version`
+- `suite_path`
+- `hash_binds_to` (`decoded_prompt_content`)
+- `pack_class` (`domain` or `scenario`)
+- `visibility` (`public`, `encoded`, or `internal`)
+- `maturity` (`canonical` or `demo`)
+
+Optional:
+
+- `doc_path` when a pack has a companion markdown file.
+
+## Coverage taxonomy v1 (canonical)
+
+Coverage taxonomy is a readability label for what a pack/scenario primarily exercises.
+
+Boundary rules:
+
+- Taxonomy labels are pack/scenario-level labels only.
+- Labels do not change gate enforcement semantics.
+- Labels do not change run/publication status semantics.
+- Labels are not scores, rankings, or analytics.
+- Use only categories that are currently used by active packs/scenarios.
+- Do not claim row-level completeness from this mapping.
+
+Current categories in active use:
+
+- `benign_control`
+- `direct_bypass`
+- `obfuscation`
+- `exfiltration`
+- `injection`
+
+Two tables. The first is generated from the registry and the coverage report
+and must not be edited by hand; the second is editorial and is maintained here.
+
+The split exists because the single six-column table that preceded it said its
+values were "sourced from the generated report" while every one of them was
+typed. It marked four suites as not runner-evaluable for five days after the
+generated surfaces were corrected, which is the third time in this release a
+published figure was wrong because it had to be retyped. The derivable columns
+are now a region this repository's generator owns.
+
+### Registry posture and coverage (generated)
+
+Full-gate coverage is the same `n/n` measurement published in
+[`docs/rule-coverage.md`](../../docs/rule-coverage.md). Runner evaluability is
+independent of coverage and records whether the standard runner can execute the
+suite, derived the way the runner derives it, through each entry's
+`enforcement_pack`. Regenerate with
+`python3 tools/rule_coverage_report.py --json-out <path> --markdown-out <path> --update-published-surfaces`.
+
+<!-- BEGIN GENERATED FULL-GATE COVERAGE -->
+| Pack/Scenario | Pack class | Registry posture | Full-gate coverage | Runner evaluability |
+| --- | --- | --- | ---: | --- |
+| `generic_safety` | domain | active / public / canonical | `100/100` | Runner-evaluable |
+| `mental_health_clinical` | domain | active / encoded / canonical | `5/15` | Runner-evaluable |
+| `account_recovery_fraud` | domain | active / public / canonical | `0/5` | Runner-evaluable |
+| `support_operator_override` | domain | active / public / canonical | `26/26` | Runner-evaluable |
+| `data_exfiltration_pressure` | domain | active / public / canonical | `27/27` | Runner-evaluable |
+| `eu_ai_act_compliance_pressure` | domain | active / public / canonical | `74/100` | Runner-evaluable |
+| `canary_fail` | domain | draft / internal / demo | `0/1` | Not runner-evaluable |
+| `scenario_injection_chain` | scenario | active / public / canonical | `6/10` | Runner-evaluable |
+| `scenario_tool_injection` | scenario | active / public / canonical | `1/2` | Runner-evaluable |
+<!-- END GENERATED FULL-GATE COVERAGE -->
+
+### Taxonomy labels (editorial)
+
+These are the readability labels defined above, assigned per suite by a person.
+They are not derived from the suites' own `category` values and no mapping
+between the two is declared, so they are not generated: a label published as
+though it were measured would be a worse defect than one that is visibly
+editorial. The boundary rules at the top of this section govern them, including
+that they are not scores, rankings, or analytics, and that row-level
+completeness is not claimed. `tests/test_packs_spec_tables.py` holds their
+membership against the registry, so a new or removed suite cannot leave this
+list silently incomplete.
+
+| Pack/Scenario | Taxonomy category |
+| --- | --- |
+| `generic_safety` | `benign_control`, `direct_bypass`, `obfuscation`, `exfiltration`, `injection` |
+| `account_recovery_fraud` | `benign_control`, `direct_bypass` |
+| `mental_health_clinical` | `benign_control`, `direct_bypass` |
+| `support_operator_override` | `benign_control`, `direct_bypass`, `exfiltration` |
+| `data_exfiltration_pressure` | `benign_control`, `exfiltration` |
+| `eu_ai_act_compliance_pressure` | `benign_control`, `direct_bypass` |
+| `scenario_injection_chain` | `benign_control`, `injection`, `exfiltration` |
+| `scenario_tool_injection` | `benign_control`, `injection` |
+| `canary_fail` | `direct_bypass` |
+
+## Rule-to-suite explainability mapping (indicative only)
+
+This section is an auditor/evaluator readability aid that links current stable rule IDs to suites that are expected to exercise those rule families.
+
+Boundary rules for this mapping:
+
+- This is indicative mapping only, not a completeness proof.
+- This is not a score, ranking, percentage, or certification claim.
+- Absence of a suite in a row does not mean the rule is unimportant or permanently untested.
+- Gate request statuses are `PASS`/`BLOCKED`; run/publication status remains `PASS`/`FAIL`/`INCONCLUSIVE`.
+- Canonical rule IDs and descriptions are defined in code (`src/sir_firewall/core.py`); this table is a documentation crosswalk.
+
+Rule-level explainability crosswalk (grounded in current active suites and the workflow-controlled paired benchmark line):
+
+The current workflow-controlled paired benchmark path selects one pack per dispatch from `generic_safety`, `support_operator_override`, `data_exfiltration_pressure`, or `eu_ai_act_compliance_pressure`, then executes an ungated baseline and a gated run for that pack. These four workflow-allowlisted packs, rather than the superseded three-pack cycle, are the current controlled benchmark execution line.
+
+| Rule ID | Rule category | Indicative suites/scenarios | Why this mapping exists (bounded rationale) |
+| --- | --- | --- | --- |
+| `SIR-RULE-ISC-SCHEMA` | `isc_validation` | Workflow-controlled paired benchmark packs: `generic_safety`, `support_operator_override`, `data_exfiltration_pressure`, `eu_ai_act_compliance_pressure`; plus any other pack/scenario executed through a valid ISC request path | ISC schema validation is request-envelope validation that applies before pack-specific content interpretation. |
+| `SIR-RULE-ISC-INTEGRITY` | `integrity_validation` | Workflow-controlled paired benchmark packs: `generic_safety`, `support_operator_override`, `data_exfiltration_pressure`, `eu_ai_act_compliance_pressure`; plus any other pack/scenario executed with integrity checks enabled | Integrity checks are request-envelope integrity controls and are not domain-pack specific. |
+| `SIR-RULE-FRICTION-LIMIT` | `friction_guard` | Workflow-controlled paired benchmark packs: `generic_safety`, `support_operator_override`, `data_exfiltration_pressure`, `eu_ai_act_compliance_pressure`; plus any other pack/scenario where payload size can exceed configured limits | Token/friction limit checks are request-size controls independent of domain taxonomy labels. |
+| `SIR-RULE-JB-HIGH-RISK` | `jailbreak_guard` | `generic_safety`; `scenario_injection_chain`, `scenario_tool_injection` | Current active taxonomy includes `injection` and `exfiltration` stressors, and `generic_safety` is the broad baseline jailbreak/exfiltration mix. |
+| `SIR-RULE-JB-DANGER-SAFETY` | `jailbreak_guard` | `generic_safety`; `scenario_injection_chain`, `scenario_tool_injection` | Scenario and baseline safety suites include override-style adversarial phrasing patterns relevant to this rule family. |
+| `SIR-RULE-JB-STRUCTURAL-OVERRIDE-EXFIL` | `jailbreak_guard` | `scenario_injection_chain`, `scenario_tool_injection`; `generic_safety` | Structural override + exfiltration marker patterns align most directly with injection/exfiltration scenario suites and may also appear in baseline adversarial rows. |
+| `SIR-RULE-JB-DETERMINISTIC-MATCH` | `jailbreak_guard` | `generic_safety`; `account_recovery_fraud`; `scenario_injection_chain`, `scenario_tool_injection` | Deterministic jailbreak/exfiltration pattern matching is broad and can be exercised across baseline, domain-risk, and scenario adversarial prompts. |
+
+Interpretation guardrail:
+
+- Use this table to explain "which suites are relevant to which rule families" during review.
+- Do not use this table to claim all rule behaviors are exhausted by listed suites.
+- Do not derive any numeric coverage metric from this table.
+
+## Minimum pack quality bar
+
+The purpose, reviewability, non-duplication and documentation items below are editorial expectations. The automated validators enforce registry metadata and referenced-file existence, CSV schema and row values, and scenario JSON schema; they do not assess substantive editorial quality.
+
+A pack must meet all of the following:
+
+- Purpose is explicit and narrow.
+- Rows are reviewable and non-duplicative.
+- `expected` labels are deterministic (`allow` or `block`).
+- `prompt` vs `prompt_b64` usage follows validator rules.
+- Registry entry passes metadata validation.
+
+## Add or update flow
+
+1. Add or modify pack suite file.
+2. Add or update pack metadata in `spec/packs/pack_registry.v1.json`.
+3. Add or update pack documentation under `tests/domain_packs/` or `tests/scenario_packs/` when applicable.
+4. Run validators:
+   - `python tools/validate_pack_registry.py --file spec/packs/pack_registry.v1.json`
+   - `python tools/validate_domain_pack.py --glob 'tests/domain_packs/*.csv'`
+   - `for f in tests/scenario_packs/*.json; do python tools/validate_scenario_pack.py --file "$f"; done`
+
+
+## Controlled growth policy (D6)
+
+Pack/scenario growth should be small and justified. Additions should only be made when at least one of the following is true:
+
+- Real-world relevance for the current governance posture.
+- Clear evaluator usefulness for near-term benchmark interpretation.
+- Obvious gap in the current small benchmark set.
+
+Non-goals for growth in this phase:
+
+- Broad taxonomy expansion for its own sake.
+- Multimodal or tool-execution expansion.
+- Benchmark scoring/ranking redesign.
+
+## Determinism constraints
+
+- No scoring, ranking, or probabilistic pack selection.
+- Hash binding remains `decoded_prompt_content`.
+- Metadata is declarative and allow-listed.
