@@ -143,34 +143,35 @@ you perform yourself. Copy exhibit 1, change one field in one ledger row, and
 re-run the command that passed:
 
 ```
-cp -r exhibits/20261012-065620-681856-gh38214991880-2b04aed6f784 /tmp/tampered
+rm -rf /tmp/sir-tampered
+cp -r exhibits/20261012-065620-681856-gh38214991880-2b04aed6f784 /tmp/sir-tampered
 python3 - <<'EOF'
 import json, pathlib
-p = pathlib.Path("/tmp/tampered/proofs/itgl_ledger.jsonl")
+p = pathlib.Path("/tmp/sir-tampered/proofs/itgl_ledger.jsonl")
 rows = p.read_text().splitlines()
 row = json.loads(rows[75])
-row["expected"] = "allow" if row["expected"] == "block" else "block"
+row["expected"] = "tampered"
 rows[75] = json.dumps(row, separators=(",", ":"), sort_keys=True)
 p.write_text("\n".join(rows) + "\n")
 EOF
-python3 tools/verify_certificate.py /tmp/tampered/audit.json --ledger /tmp/tampered/proofs/itgl_ledger.jsonl
+python3 tools/verify_certificate.py /tmp/sir-tampered/audit.json --ledger /tmp/sir-tampered/proofs/itgl_ledger.jsonl
 ```
 
 Exits `7`, and names the row and both hashes:
 
 ```
-ERROR: ledger binding verification failed: Entry #76 has invalid ledger_hash: stored='a8cccdba5dbe2035267859644d72eefb3b4541fb0dd15842904197700e092b9f', computed='d46ce36f31b3dd34814b4ae198d39e6c00eb24cdd3cd0f22aba9ecdaf6cfac0e'
+ERROR: ledger binding verification failed: Entry #76 has invalid ledger_hash: stored='a8cccdba5dbe2035267859644d72eefb3b4541fb0dd15842904197700e092b9f', computed='2ae80c324eabb47c26efc81fa47f262f2ded03928ac8cd9ee35bb2bee4c0e174'
 ```
 
 One field in one row of 150, and the chain does not re-derive.
 
 ## How to read the exit codes
 
-Certificate verifier. Two rows share exit 0, because 82 archives verified with their binding checked and 39 verified without a ledger to check it against, and those are different facts:
+Certificate verifier. Two rows share exit 0, because 83 archives verified with their binding checked and 39 verified without a ledger to check it against, and those are different facts:
 
 | Exit | Meaning | Archives |
 |---|---|---|
-| `0` | verified | 82 |
+| `0` | verified | 83 |
 | `0` | verified; no ledger in the archive, so no binding was checked | 39 |
 | `5` | SIGNATURE VERIFICATION FAILED | 6 |
 | `7` | ledger chain or certificate-binding verification failed | none published |
@@ -181,7 +182,7 @@ Archive receipt verifier:
 
 | Exit | Meaning | Archives |
 |---|---|---|
-| `0` | verified | 208 |
+| `0` | verified | 209 |
 | `2` | archive incomplete or signature failed | 105 |
 | `3` | no archive receipt (legacy archive) | 39 |
 

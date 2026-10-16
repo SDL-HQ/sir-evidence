@@ -35,7 +35,7 @@ item here that is a detection rather than a disclosure, and it is the reason
 the evidence plane exists.
 
 The archive of record is at [https://github.com/SDL-HQ/sir-firewall](https://github.com/SDL-HQ/sir-firewall). It holds
-352 runs and 350 certificates.
+353 runs and 351 certificates.
 
 Nothing here is a sample chosen for how it looks. Each exhibit is selected from
 a category by a tool in the main repository, a test there refuses any category
