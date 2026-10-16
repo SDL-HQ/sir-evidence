@@ -22,14 +22,14 @@ these 6 come back NOT ESTABLISHED or FAILED, and
 4 of them are defects this project has already written up in its
 own errata, named in the table.
 
-| # | Exhibit | Document verifier | Its exit | Receipt exit | Verdict | Errata |
-|---|---|---|---|---|---|---|
-| 1 | an archive that establishes every property | `verify_certificate.py` | `0` | `0` | **ESTABLISHED** | - |
-| 2 | a signature that does not verify | `verify_certificate.py` | `5` | `2` | **FAILED** | E2 |
-| 3 | an archive from before the 2.3.4 correction | `verify_certificate.py` | `9` | `0` | **NOT ESTABLISHED** | E4 |
-| 4 | an archive with no ledger and no receipt | `verify_certificate.py` | `0` | `3` | **NOT ESTABLISHED** | E3 |
-| 5 | a complete-looking archive that is not | `verify_certificate.py` | `0` | `2` | **FAILED** | E1 |
-| 6 | a baseline record | `verify_baseline_record.py` | `0` | `0` | **ESTABLISHED** | - |
+| # | Exhibit | Document verifier | Its exit | Receipt exit | Verdict | Named model ran | Errata |
+|---|---|---|---|---|---|---|---|
+| 1 | an archive that establishes every property | `verify_certificate.py` | `0` | `0` | **ESTABLISHED** | **no** | - |
+| 2 | a signature that does not verify | `verify_certificate.py` | `5` | `2` | **FAILED** | **no** | E2 |
+| 3 | an archive from before the 2.3.4 correction | `verify_certificate.py` | `9` | `0` | **NOT ESTABLISHED** | yes, 24 | E4 |
+| 4 | an archive with no ledger and no receipt | `verify_certificate.py` | `0` | `3` | **NOT ESTABLISHED** | unknown | E3 |
+| 5 | a complete-looking archive that is not | `verify_certificate.py` | `0` | `2` | **FAILED** | **no** | E1 |
+| 6 | a baseline record | `verify_baseline_record.py` | `0` | `0` | **ESTABLISHED** | yes, 50 | - |
 
 [VERIFY.md](VERIFY.md) has the exact command for each, explains why each one
 names its ledger, and ends with a recipe for changing one field in one ledger
@@ -38,7 +38,7 @@ item here that is a detection rather than a disclosure, and it is the reason
 the evidence plane exists.
 
 The archive of record is at [https://github.com/SDL-HQ/sir-firewall](https://github.com/SDL-HQ/sir-firewall). It holds
-355 runs and 353 certificates.
+356 runs and 354 certificates.
 
 Nothing here is a sample chosen for how it looks. Each exhibit is selected from
 a category by a tool in the main repository, a test there refuses any category

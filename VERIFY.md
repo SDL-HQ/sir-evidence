@@ -69,7 +69,7 @@ python3 tools/verify_evidence.py exhibits/20261012-065620-681856-gh38214991880-2
 
 Document verifier exits `0`, receipt verifier exits `0`, and the verdict is **ESTABLISHED**.
 
-Signed payload: `model` is `grok-4.3` on `xai`, with `model_calls_made: 0`. **The named model did not run**, and no verifier on this page would tell you that.
+Signed payload: `model` is `grok-4.3` on `xai`, with zero recorded calls. **The named model did not run**, and no verifier on this page would tell you that.
 
 ### 2. a signature that does not verify
 
@@ -85,7 +85,7 @@ python3 tools/verify_evidence.py exhibits/20260405-040319-000000-702b336916d3
 
 Document verifier exits `5`, receipt verifier exits `2`, and the verdict is **FAILED**.
 
-Signed payload: `model` is `xai/grok-3-beta` on `xai`, with `model_calls_made: 0`. **The named model did not run**, and no verifier on this page would tell you that.
+Signed payload: `model` is `xai/grok-3-beta` on `xai`, with zero recorded calls. **The named model did not run**, and no verifier on this page would tell you that.
 
 This archive is listed individually under **E2** in the archive of record's errata.
 
@@ -103,7 +103,7 @@ python3 tools/verify_evidence.py exhibits/20260418-153112-000000-gh24607820167-f
 
 Document verifier exits `9`, receipt verifier exits `0`, and the verdict is **NOT ESTABLISHED**.
 
-Signed payload: `model` is `xai/grok-4-1-fast` on `xai`, with `model_calls_made: 24`. **The named model did run.**
+Signed payload: `model` is `xai/grok-4-1-fast` on `xai`, with 24 recorded calls to it. **The named model did run.**
 
 This archive's defect is **E4** in the archive of record's errata, which describes the class and does not enumerate its members, so searching that document for this run id finds nothing.
 
@@ -121,7 +121,7 @@ python3 tools/verify_evidence.py exhibits/20260111-023031-211ac186f758
 
 Document verifier exits `0`, receipt verifier exits `3`, and the verdict is **NOT ESTABLISHED**.
 
-Signed payload: `model` is `xai/grok-3-beta` on `xai`, with `model_calls_made: 0`. **The named model did not run**, and no verifier on this page would tell you that.
+Signed payload: `model` is `xai/grok-3-beta` on `xai`, and the document records no call counters at all, because they postdate it. **Whether the named model ran cannot be told from this archive.** That is not the same as zero.
 
 This archive is listed individually under **E3** in the archive of record's errata.
 
@@ -139,7 +139,7 @@ python3 tools/verify_evidence.py exhibits/20260921-134234-688792-gh35607304829-b
 
 Document verifier exits `0`, receipt verifier exits `2`, and the verdict is **FAILED**.
 
-Signed payload: `model` is `grok-4.3` on `xai`, with `model_calls_made: 0`. **The named model did not run**, and no verifier on this page would tell you that.
+Signed payload: `model` is `grok-4.3` on `xai`, with zero recorded calls. **The named model did not run**, and no verifier on this page would tell you that.
 
 This archive is listed individually under **E1** in the archive of record's errata.
 
@@ -157,7 +157,7 @@ python3 tools/verify_evidence.py exhibits/20261015-092557-107124-gh38712792514-6
 
 Document verifier exits `0`, receipt verifier exits `0`, and the verdict is **ESTABLISHED**.
 
-Signed payload: `model` is `grok-4.3` on `xai`, with `model_calls_made: 0`. **The named model did not run**, and no verifier on this page would tell you that.
+Signed payload: `model` is `grok-4.3` on `xai`, with 50 recorded calls to it. **The named model did run.**
 
 And the part this exhibit exists for, the wrong verifier refusing it rather
 than reporting something about it:
@@ -202,11 +202,11 @@ One field in one row of 150, and the chain does not re-derive.
 
 ## How to read the exit codes
 
-Certificate verifier. Two rows share exit 0, because 85 archives verified with their binding checked and 39 verified without a ledger to check it against, and those are different facts:
+Certificate verifier. Two rows share exit 0, because 86 archives verified with their binding checked and 39 verified without a ledger to check it against, and those are different facts:
 
 | Exit | Meaning | Archives |
 |---|---|---|
-| `0` | verified | 85 |
+| `0` | verified | 86 |
 | `0` | verified; no ledger in the archive, so no binding was checked | 39 |
 | `5` | SIGNATURE VERIFICATION FAILED | 6 |
 | `7` | ledger chain or certificate-binding verification failed | none published |
@@ -217,7 +217,7 @@ Archive receipt verifier:
 
 | Exit | Meaning | Archives |
 |---|---|---|
-| `0` | verified | 211 |
+| `0` | verified | 212 |
 | `2` | archive incomplete or signature failed | 105 |
 | `3` | no archive receipt (legacy archive) | 39 |
 
