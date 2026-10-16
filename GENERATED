@@ -1,6 +1,6 @@
 source https://github.com/SDL-HQ/sir-firewall
 tag v2.5.0
-commit cea3430754691a42d4aff771dd0687ea6b6694c3
-generated 2026-10-16T08:48:55Z
-archives 350
-certificates 348
+commit badd39f87c5b3899891f6aa1b77a579900c5dd16
+generated 2026-10-16T09:18:58Z
+archives 352
+certificates 350

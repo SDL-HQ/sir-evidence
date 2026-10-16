@@ -64,7 +64,7 @@ python3 tools/verify_evidence.py exhibits/20260405-040319-000000-702b336916d3
 
 Document verifier exits `5`, receipt verifier exits `2`, and the verdict is **FAILED**.
 
-This archive's defect is disclosed as **E2** in the archive of record's errata.
+This archive is listed individually under **E2** in the archive of record's errata.
 ### 3. an archive from before the 2.3.4 correction
 
 a documented format boundary is not tampering, and the verifier says which
@@ -79,7 +79,7 @@ python3 tools/verify_evidence.py exhibits/20260418-153112-000000-gh24607820167-f
 
 Document verifier exits `9`, receipt verifier exits `0`, and the verdict is **NOT ESTABLISHED**.
 
-This archive's defect is disclosed as **E4** in the archive of record's errata.
+This archive's defect is **E4** in the archive of record's errata, which describes the class and does not enumerate its members, so searching that document for this run id finds nothing.
 ### 4. an archive with no ledger and no receipt
 
 verified, and less than "verified" sounds: nothing bound it and nothing vouches for the files
@@ -94,7 +94,7 @@ python3 tools/verify_evidence.py exhibits/20260111-023031-211ac186f758
 
 Document verifier exits `0`, receipt verifier exits `3`, and the verdict is **NOT ESTABLISHED**.
 
-This archive's defect is disclosed as **E3** in the archive of record's errata.
+This archive is listed individually under **E3** in the archive of record's errata.
 ### 5. a complete-looking archive that is not
 
 the receipt catches what the certificate cannot
@@ -109,7 +109,7 @@ python3 tools/verify_evidence.py exhibits/20260921-134234-688792-gh35607304829-b
 
 Document verifier exits `0`, receipt verifier exits `2`, and the verdict is **FAILED**.
 
-This archive's defect is disclosed as **E1** in the archive of record's errata.
+This archive is listed individually under **E1** in the archive of record's errata.
 ### 6. a baseline record
 
 a certificate verifier refuses it, and its own verifier accepts it
@@ -166,11 +166,11 @@ One field in one row of 150, and the chain does not re-derive.
 
 ## How to read the exit codes
 
-Certificate verifier. Two rows share exit 0, because 80 archives verified with their binding checked and 39 verified without a ledger to check it against, and those are different facts:
+Certificate verifier. Two rows share exit 0, because 82 archives verified with their binding checked and 39 verified without a ledger to check it against, and those are different facts:
 
 | Exit | Meaning | Archives |
 |---|---|---|
-| `0` | verified | 80 |
+| `0` | verified | 82 |
 | `0` | verified; no ledger in the archive, so no binding was checked | 39 |
 | `5` | SIGNATURE VERIFICATION FAILED | 6 |
 | `7` | ledger chain or certificate-binding verification failed | none published |
@@ -181,7 +181,7 @@ Archive receipt verifier:
 
 | Exit | Meaning | Archives |
 |---|---|---|
-| `0` | verified | 206 |
+| `0` | verified | 208 |
 | `2` | archive incomplete or signature failed | 105 |
 | `3` | no archive receipt (legacy archive) | 39 |
 
