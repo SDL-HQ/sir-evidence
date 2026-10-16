@@ -3,10 +3,13 @@
 SIR is a deterministic pre-inference gate. It reads a request before a model
 does, decides `PASS` or `BLOCKED` by rules alone with no model in the decision
 path, and writes a signed record of what it saw and what it decided. The record
-is the point: it is designed to be checked by someone who does not trust us.
+is the point: it can be checked offline, by someone who does not have to take
+our word for what it says.
 
-**Read [LIMITS.md](LIMITS.md) second.** It says what SIR does not do, in the
-project's own words, and most of what is below is a limit made concrete.
+That is not the same as independent of us. The verifiers here are ours and the
+signing key is ours, so a signature that verifies establishes that we signed
+that payload, not that the payload is true. [LIMITS.md](LIMITS.md) says what
+follows from that, and it is the second thing to read.
 
 This repository is generated from the archive of record, pinned at `v2.5.0`. It
 holds 6 real published archives, each chosen because running our
@@ -19,14 +22,14 @@ these 6 come back NOT ESTABLISHED or FAILED, and
 4 of them are defects this project has already written up in its
 own errata, named in the table.
 
-| # | Exhibit | Document exit | Receipt exit | Verdict | Errata |
-|---|---|---|---|---|---|
-| 1 | an archive that establishes every property | `0` | `0` | **ESTABLISHED** | - |
-| 2 | a signature that does not verify | `5` | `2` | **FAILED** | E2 |
-| 3 | an archive from before the 2.3.4 correction | `9` | `0` | **NOT ESTABLISHED** | E4 |
-| 4 | an archive with no ledger and no receipt | `0` | `3` | **NOT ESTABLISHED** | E3 |
-| 5 | a complete-looking archive that is not | `0` | `2` | **FAILED** | E1 |
-| 6 | a baseline record | `0` | `0` | **ESTABLISHED** | - |
+| # | Exhibit | Document verifier | Its exit | Receipt exit | Verdict | Errata |
+|---|---|---|---|---|---|---|
+| 1 | an archive that establishes every property | `verify_certificate.py` | `0` | `0` | **ESTABLISHED** | - |
+| 2 | a signature that does not verify | `verify_certificate.py` | `5` | `2` | **FAILED** | E2 |
+| 3 | an archive from before the 2.3.4 correction | `verify_certificate.py` | `9` | `0` | **NOT ESTABLISHED** | E4 |
+| 4 | an archive with no ledger and no receipt | `verify_certificate.py` | `0` | `3` | **NOT ESTABLISHED** | E3 |
+| 5 | a complete-looking archive that is not | `verify_certificate.py` | `0` | `2` | **FAILED** | E1 |
+| 6 | a baseline record | `verify_baseline_record.py` | `0` | `0` | **ESTABLISHED** | - |
 
 [VERIFY.md](VERIFY.md) has the exact command for each, explains why each one
 names its ledger, and ends with a recipe for changing one field in one ledger
@@ -35,7 +38,7 @@ item here that is a detection rather than a disclosure, and it is the reason
 the evidence plane exists.
 
 The archive of record is at [https://github.com/SDL-HQ/sir-firewall](https://github.com/SDL-HQ/sir-firewall). It holds
-353 runs and 351 certificates.
+355 runs and 353 certificates.
 
 Nothing here is a sample chosen for how it looks. Each exhibit is selected from
 a category by a tool in the main repository, a test there refuses any category
