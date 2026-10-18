@@ -202,11 +202,11 @@ One field in one row of 150, and the chain does not re-derive.
 
 ## How to read the exit codes
 
-Certificate verifier. Two rows share exit 0, because 86 archives verified with their binding checked and 39 verified without a ledger to check it against, and those are different facts:
+Certificate verifier. Two rows share exit 0, because 101 archives verified with their binding checked and 39 verified without a ledger to check it against, and those are different facts:
 
 | Exit | Meaning | Archives |
 |---|---|---|
-| `0` | verified | 86 |
+| `0` | verified | 101 |
 | `0` | verified; no ledger in the archive, so no binding was checked | 39 |
 | `5` | SIGNATURE VERIFICATION FAILED | 6 |
 | `7` | ledger chain or certificate-binding verification failed | none published |
@@ -217,8 +217,8 @@ Archive receipt verifier:
 
 | Exit | Meaning | Archives |
 |---|---|---|
-| `0` | verified | 212 |
-| `2` | archive incomplete or signature failed | 105 |
+| `0` | verified | 224 |
+| `2` | archive incomplete or signature failed | 108 |
 | `3` | no archive receipt (legacy archive) | 39 |
 
 Baseline record verifier:

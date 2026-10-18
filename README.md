@@ -11,7 +11,7 @@ signing key is ours, so a signature that verifies establishes that we signed
 that payload, not that the payload is true. [LIMITS.md](LIMITS.md) says what
 follows from that, and it is the second thing to read.
 
-This repository is generated from the archive of record, pinned at `v2.5.0`. It
+This repository is generated from the archive of record, pinned at `v2.6.0`. It
 holds 6 real published archives, each chosen because running our
 verifiers against it produces a different answer.
 
@@ -37,8 +37,12 @@ row so you can watch the chain refuse to re-derive. That last one is the only
 item here that is a detection rather than a disclosure, and it is the reason
 the evidence plane exists.
 
-The archive of record is at [https://github.com/SDL-HQ/sir-firewall](https://github.com/SDL-HQ/sir-firewall). It holds
-356 runs and 354 certificates.
+The archive of record is at [https://github.com/SDL-HQ/sir-firewall](https://github.com/SDL-HQ/sir-firewall). At `v2.6.0`, the release this
+window is built from, it held 371 runs and
+369 certificates. It holds more now: a run is
+published on every merge to its main branch, and this page is rebuilt only
+when a release is cut, so treat those two numbers as a position on a date and
+read the current ones from the archive itself.
 
 Nothing here is a sample chosen for how it looks. Each exhibit is selected from
 a category by a tool in the main repository, a test there refuses any category

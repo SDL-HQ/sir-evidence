@@ -1,6 +1,7 @@
 source https://github.com/SDL-HQ/sir-firewall
-tag v2.5.0
-commit e05e1beb324672d926903688f555aa8514326f69
-generated 2026-10-16T10:49:39Z
-archives 356
-certificates 354
+tag v2.6.0
+commit 7b2a9e744a6508ace26edfa3d1b6b3e1664d8b23
+generated 2026-10-18T02:57:38Z
+archives 371
+certificates 369
+about Six published SIR archives, four verifiers, one dependency. Our own verdict tool establishes two of the six, and the four it does not are defects we have written up.

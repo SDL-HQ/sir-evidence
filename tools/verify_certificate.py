@@ -43,11 +43,13 @@ from itgl import (
     CHAIN_VERSION_V1,
     CHAIN_VERSION_V2,
     LedgerVerificationError,
+    configuration_disagreement,
     counter_disagreements,
     forwarded_row_positions,
     ledger_chain_version,
     load_and_verify_ledger,
     load_ledger,
+    result_disagreement,
 )
 
 DEFAULT_PUBKEY_PATH = Path("spec/sdl.pub")
@@ -692,9 +694,77 @@ def main() -> int:
                 )
             return COUNTER_BINDING_FAILURE
         if disagreements is None:
+            # A certificate may say the check did not happen. What it may not
+            # do is claim the check happened over rows that cannot support it.
+            # `counters_checked_against_ledger` is a signed field, and
+            # `verify_evidence.py` establishes its "signed counters" property
+            # from that field alone, so a certificate asserting it over an
+            # underivable ledger produced "the signed counters were recomputed
+            # from the rows the certificate binds" about a recomputation that
+            # never ran. That is a value read from the document instead of
+            # derived from the rows: the defect class this verifier exists to
+            # refuse, in the one property the three-valued discipline protects.
+            #
+            # Version-conditional by construction rather than by a floor. The
+            # field arrived with evidence contract v4 at 2.4.0, so every
+            # certificate written before it returns None here and is untouched.
+            # Measured when this landed: 0 of the 77 established archives move.
+            if cert.get("counters_checked_against_ledger") is True:
+                print(
+                    "ERROR: counter binding verification failed: the certificate "
+                    "claims counters_checked_against_ledger=true, but the rows of "
+                    "the ledger it binds do not carry the fields the counters are "
+                    "recomputed from, so no such check can have happened.",
+                    file=sys.stderr,
+                )
+                return COUNTER_BINDING_FAILURE
             print(
                 "NOTE: this ledger predates the fields needed to recompute the "
                 "certificate's counters, so they were not checked against it.",
+                file=sys.stderr,
+            )
+
+        # And the identity of the configuration, which the count above cannot
+        # establish: the rows can witness exactly one configuration while the
+        # certificate names a different one, and the name is what a reader uses
+        # to ask what was enforced.
+        configuration = configuration_disagreement(cert, entries)
+        if configuration:
+            print(
+                "ERROR: counter binding verification failed: the certificate's "
+                "configuration is not the one its ledger witnesses",
+                file=sys.stderr,
+            )
+            for field, values in sorted(configuration.items()):
+                print(
+                    f"  {field}: certificate={values['claimed']}, ledger={values['ledger']}",
+                    file=sys.stderr,
+                )
+            return COUNTER_BINDING_FAILURE
+
+        # Then the verdict itself. Until 17 October 2026 every input to
+        # `result` was recomputed here and `result` was not, so the field that
+        # gates canonical publication, the CI outcome and the public homepage
+        # was the one derived value nothing checked. A certificate carrying
+        # `AUDIT PASSED` over a ledger whose rows leaked passed this verifier
+        # and the contract validator at exit 0.
+        verdict = result_disagreement(cert, entries)
+        if verdict:
+            print(
+                "ERROR: counter binding verification failed: the certificate's "
+                "result is not the result its ledger supports",
+                file=sys.stderr,
+            )
+            for field, values in sorted(verdict.items()):
+                print(
+                    f"  {field}: certificate={values['claimed']!r}, ledger={values['ledger']!r}",
+                    file=sys.stderr,
+                )
+            return COUNTER_BINDING_FAILURE
+        if verdict is None and disagreements is not None:
+            print(
+                "NOTE: this ledger does not support recomputing the "
+                "certificate's result, so it was not checked against it.",
                 file=sys.stderr,
             )
 
