@@ -1,7 +1,7 @@
 source https://github.com/SDL-HQ/sir-firewall
 tag v2.6.0
 commit 7b2a9e744a6508ace26edfa3d1b6b3e1664d8b23
-generated 2026-10-18T02:57:38Z
+generated 2026-10-19T13:06:49Z
 archives 371
 certificates 369
 about Six published SIR archives, four verifiers, one dependency. Our own verdict tool establishes two of the six, and the four it does not are defects we have written up.
